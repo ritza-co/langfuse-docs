@@ -41,6 +41,7 @@ os.environ["OPENAI_API_KEY"] = ""
 # os.environ["LANGFUSE_HOST"] = "http://localhost:3000"
 ```
 
+We configure the variables for Langchain evaluations: 
 
 ```python
 os.environ['EVAL_MODEL'] = "gpt-3.5-turbo-instruct"
@@ -61,7 +62,7 @@ EVAL_TYPES={
 }
 ```
 
-Initialize the Langfuse Python SDK, more information [here](https://langfuse.com/docs/sdk/python#1-installation).
+Next, initialize the Langfuse Python SDK. Read more about the SDK [here](https://langfuse.com/docs/sdk/python#1-installation).
 
 
 ```python
@@ -74,9 +75,9 @@ langfuse.auth_check()
 
 ### Fetching data
 
-Load all `generations` from Langfuse filtered by `name`, in this case `OpenAI`. Names are used in Langfuse to identify different types of generations within an application. Change it to the name you want to evaluate.
+Load all `generations` from Langfuse filtered by `name` and `user_id`. Names are used in Langfuse to identify different types of generations within an application. The user ID is used in Langfuse to identify generations made by different users. Change these to filter the generations you want to evaluate.
 
-Checkout [docs](https://langfuse.com/docs/sdk/python#generation) on how to set the name when ingesting an LLM Generation.
+Checkout [docs](https://langfuse.com/docs/sdk/python#generation) on how to set the name and user ID when ingesting an LLM Generation.
 
 
 ```python
@@ -97,13 +98,14 @@ def fetch_all_pages(name=None, user_id = None, limit=50):
 
 
 ```python
-generations = fetch_all_pages(user_id='user:abc')
+generations = fetch_all_pages(name='name', user_id='userID')
 ```
 
 ### Set up evaluation functions
 
-In this section, we define functions to set up the Langchain eval based on the entries in `EVAL_TYPES`. Hallucinations require their own function. More on the Langchain evals can be found [here](https://python.langchain.com/docs/guides/evaluation/string/criteria_eval_chain).
+In this section, we define functions to set up the Langchain eval based on the entries in `EVAL_TYPES`. More on the Langchain evals can be found [here](https://python.langchain.com/docs/guides/evaluation/string/criteria_eval_chain).
 
+We also define a basic criterion for a hallucination evaluation. In a production setting, this criteria will be improved and adapted to suit your specific needs. 
 
 ```python
 from langchain.evaluation import load_evaluator
@@ -133,7 +135,7 @@ def get_hallucination_eval():
 
 Below, we execute the evaluation for each `Generation` loaded above. Each score is ingested into Langfuse via [`langfuse.score()`](https://langfuse.com/docs/scores).
 
-
+Since Langchain evaluation functions can occasionally return `None` values, we implement a basic check to ensure only valid scores get passed to Langfuse. 
 
 ```python
 def execute_eval_and_score():
@@ -148,12 +150,14 @@ def execute_eval_and_score():
       )
       print(eval_result)
 
-      langfuse.score(name=criterion, trace_id=generation.trace_id, observation_id=generation.id, value=eval_result["score"], comment=eval_result['reasoning'])
+      if eval_result is not None and eval_result["score"] is not None and eval_result["reasoning"] is not None:
+        langfuse.score(name=criterion, trace_id=generation.trace_id, observation_id=generation.id, value=eval_result["score"], comment=eval_result['reasoning'])
 
 execute_eval_and_score()
 
 ```
 
+We now implement the function to evaluate hallucination: 
 
 ```python
 # hallucination
@@ -189,7 +193,7 @@ langfuse.flush()
 
 ### See Scores in Langfuse
 
- In the Langfuse UI, you can filter Traces by `Scores` and look into the details for each. Check out Langfuse Analytics to understand the impact of new prompt versions or application releases on these scores.
+In the Langfuse UI, you can filter Traces by `Scores` and look into the details for each. Check out [Langfuse Analytics](pages\docs\analytics\overview.mdx) to understand the impact of new prompt versions or application releases on these scores.
 
 ![Image of Trace](https://langfuse.com/images/docs/trace-conciseness-score.jpg)
 _Example trace with conciseness score_
