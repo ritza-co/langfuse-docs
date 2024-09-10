@@ -100,6 +100,15 @@ Langfuse can be configured using environment variables ([.env.prod.example](http
 | `DB_EXPORT_PAGE_SIZE`                                                                                | `1000`             | Optional page size for streaming exports to S3 to avoid memory issues. The page size can be adjusted if needed to optimize performance.                                                                                                                                                                                                                                                               |
 | `LANGFUSE_AUTO_POSTGRES_MIGRATION_DISABLED`                                                          | `false`            | Set to `true` to disable automatic database migrations on docker startup.                                                                                                                                                                                                                                                                                                                             |
 
+### Self-Hosting Database
+
+If you are self-hosting the Postgres database, you may encounter issues connecting to it. Ensure you configure the Docker network settings correctly to allow connections outside of the Docker container:
+   - If you're using Docker for Windows or Docker for Mac on versions 18.03+, use the host `host.docker.internal` in the database connection string instead of `localhost` or `127.0.0.1`.
+
+   - If you're using Docker for Linux versions 20.10.0+, use the host `host.docker.internal` in the connection string, and add the `--add-host host.docker.internal:host-gateway` flag when starting the Docker container.
+
+   - See this StackOverflow [answer](https://stackoverflow.com/a/24326540) for more details if neither of the above is applicable. 
+
 ### Authentication
 
 #### Email/Password [#auth-email-password]
@@ -178,7 +187,7 @@ If you encounter issues, ensure the following:
 - `NEXTAUTH_URL` exactly matches the URL you're accessing Langfuse with. Pay attention to the protocol (http vs https) and the port (e.g., 3000 if you do not expose Langfuse on port 80).
 - Set `HOSTNAME` to `0.0.0.0` if you cannot access Langfuse.
 - SSO: Ensure that the OAuth provider is configured correctly. The return path needs to match the `NEXTAUTH_URL`, and the OAuth client needs to be configured with the correct callback URL.
-- Encode special characters in `DATABASE_URL`, see this StackOverflow [answer](https://stackoverflow.com/a/68213745) for details.
+- Encode special characters in `DATABASE_URL`, see this StackOverflow [answer](https://stackoverflow.com/a/68213745) for details. 
 - If you use the SDKs to connect with Langfuse, use `auth_check()` to verify that the connection works.
 - Make sure you are at least on Postgres 12.
 
